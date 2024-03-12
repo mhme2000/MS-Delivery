@@ -17,4 +17,10 @@ public class DeliveryController(ISendEmailUseCase sendEmailUseCase) : Controller
         if (result == null) return BadRequest("Error to send email.");
         return NoContent();
     }
+
+    [HttpGet("health")]
+    public IActionResult Health()
+    {
+        return Ok(DateTime.Now);
+    }
 }
