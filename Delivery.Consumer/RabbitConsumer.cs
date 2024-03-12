@@ -15,10 +15,10 @@ public static class RabbitConsumer
     {
         ConnectionFactory factory = new()
         {
-            UserName = "guest",
-            Password = "guest",
-            VirtualHost = "/",
-            HostName = "localhost",
+            UserName = "twlvsbxr",
+            Password = "vbeQt4hymocx2OG3lCzR4t6qI0OTRjKA",
+            VirtualHost = "twlvsbxr",
+            HostName = "fish-01.rmq.cloudamqp.com",
             Port = 5672
         };
 
