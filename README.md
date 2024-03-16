@@ -34,7 +34,7 @@ MS-Delivery em .NET 8. Projeto que compõe o serviço de eccomerce desenvolvido 
 
 - Clone o projeto com: `git clone https://github.com/mhme2000/MS-Delivery.git`
 - Acesse o projeto, e execute: `docker compose up --build -d`
-- Pronto! Agora é só se divertir!
+- Pronto! Agora seu projeto está rodando no endereço http://localhost:7000/swagger, é só se divertir!
 
 ---
 
