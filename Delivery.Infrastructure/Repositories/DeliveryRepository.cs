@@ -18,12 +18,26 @@ public class DeliveryRepository(DeliveryContext context) : IDeliveryRepository
 
     public void RegisterLog(SendEmailLog model)
     {
-        _context.SendEmailLog.Add(model);
-        _context.SaveChanges();
+        try
+        {
+            _context.SendEmailLog.Add(model);
+            _context.SaveChanges();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
 
     public void SendEmail(SendEmailDTO dto)
     {
-        _smtpClient.Send("from@example.com", dto.Email, dto.Subject, dto.Content);
+        try
+        {
+            _smtpClient.Send("from@example.com", dto.Email, dto.Subject, dto.Content);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
 }

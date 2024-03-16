@@ -11,9 +11,17 @@ public class SendEmailUseCase(IDeliveryRepository deliveryRepository) : ISendEma
 
     public object Execute(SendEmailDTO dto)
     {
-        _deliveryRepository.SendEmail(dto);
-        var sendEmailLogModel = new SendEmailLog(dto.Email, dto.Content, dto.Subject);
-        _deliveryRepository.RegisterLog(sendEmailLogModel);
-        return new object { };
+        try
+        {
+            _deliveryRepository.SendEmail(dto);
+            var sendEmailLogModel = new SendEmailLog(dto.Email, dto.Content, dto.Subject);
+            _deliveryRepository.RegisterLog(sendEmailLogModel);
+            return new object { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return new object { };
+        }
     }
 }

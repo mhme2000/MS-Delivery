@@ -12,7 +12,9 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
+        builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
         builder.Services.AddScoped<ISendEmailUseCase, SendEmailUseCase>();
+        builder.Services.AddScoped<ISearchCustomerByCustomerIdUseCase, SearchCustomerByCustomerIdUseCase>();
         builder.Services.AddDbContext<DeliveryContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
         builder.Services.AddControllers();
@@ -24,9 +26,10 @@ public class Program
         var dataContext = scope.ServiceProvider.GetRequiredService<DeliveryContext>();
         dataContext.Database.Migrate();
         var serviceEmail = scope.ServiceProvider.GetService<ISendEmailUseCase>();
-        if(serviceEmail != null)
+        var serviceCustomer = scope.ServiceProvider.GetService<ISearchCustomerByCustomerIdUseCase>();
+        if (serviceEmail != null && serviceCustomer != null)
         {
-            Thread threadConsumer = new(() => RabbitConsumer.Consume(serviceEmail));
+            Thread threadConsumer = new(() => RabbitConsumer.Consume(serviceEmail, serviceCustomer));
             threadConsumer.Start();
         }
         app.UseSwagger();

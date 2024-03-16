@@ -1,5 +1,4 @@
 ﻿using Delivery.Application.Interfaces.Customers;
-using Delivery.Application.UseCases.Customers;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -10,9 +9,10 @@ public static class RabbitConsumer
 {
     public record ConsumerModel
     {
-        public string Email { get; set; }
+        public Guid OrderId { get; set; }
+        public Guid CustomerId { get; set; }
     }
-    public static void Consume(ISendEmailUseCase sendEmailUseCase)
+    public static void Consume(ISendEmailUseCase sendEmailUseCase, ISearchCustomerByCustomerIdUseCase searchCustomerByCustomerIdUseCase)
     {
         ConnectionFactory factory = new()
         {
@@ -25,14 +25,14 @@ public static class RabbitConsumer
 
         IConnection conn = factory.CreateConnection();
 
-        ListenQueuePedidoPronto(conn, sendEmailUseCase);
-        ListenQueuePedidoPago(conn, sendEmailUseCase);
-        ListenQueuePedidoCancelado(conn, sendEmailUseCase);
+        ListenQueuePedidoPronto(conn, sendEmailUseCase, searchCustomerByCustomerIdUseCase);
+        ListenQueuePedidoPago(conn, sendEmailUseCase, searchCustomerByCustomerIdUseCase);
+        ListenQueuePedidoCancelado(conn, sendEmailUseCase, searchCustomerByCustomerIdUseCase);
 
         Console.WriteLine("Iniciando consumer");
     }
 
-    private static void ListenQueuePedidoPronto(IConnection conn, ISendEmailUseCase sendEmailUseCase)
+    private static void ListenQueuePedidoPronto(IConnection conn, ISendEmailUseCase sendEmailUseCase, ISearchCustomerByCustomerIdUseCase searchCustomerByCustomerIdUseCase)
     {
         IModel channel = conn.CreateModel();
         channel.ExchangeDeclare(exchange: "exchange_pedido_pronto", type: ExchangeType.Direct, durable: false, autoDelete: false, null);
@@ -40,22 +40,25 @@ public static class RabbitConsumer
         channel.QueueBind(queue: "queue_pedido_pronto_1", exchange: "exchange_pedido_pronto", routingKey: "key_default", null);
 
         var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (ch, ea) =>
+        consumer.Received += async (ch, ea) =>
         {
             var body = ea.Body.ToArray();
             var messageSerialize = Encoding.UTF8.GetString(body);
             var message = JsonSerializer.Deserialize<ConsumerModel>(messageSerialize, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (message != null && !string.IsNullOrEmpty(message.Email))
-                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = message.Email, Content = "Seu pedido está pronto.", Subject = "Pedido pronto" });
+            if (message != null && Guid.Empty != message.OrderId)
+            {
+                var email = await searchCustomerByCustomerIdUseCase.Execute(message.CustomerId);
+                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = email, Content = $"Seu pedido #{message.OrderId} está pronto.", Subject = "Pedido pronto" });
+            }
             Console.WriteLine(" Recebendo a seguinte mensagem: {0}", message);
             channel.BasicAck(ea.DeliveryTag, false);
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
 
         };
         string consumerTag = channel.BasicConsume(queue: "queue_pedido_pronto_1", autoAck: false, consumer: consumer);
     }
 
-    private static void ListenQueuePedidoPago(IConnection conn, ISendEmailUseCase sendEmailUseCase)
+    private static void ListenQueuePedidoPago(IConnection conn, ISendEmailUseCase sendEmailUseCase, ISearchCustomerByCustomerIdUseCase searchCustomerByCustomerIdUseCase)
     {
         IModel channel = conn.CreateModel();
         channel.ExchangeDeclare(exchange: "exchange_pedido_pago", type: ExchangeType.Fanout, durable: false, autoDelete: false, null);
@@ -63,22 +66,25 @@ public static class RabbitConsumer
         channel.QueueBind(queue: "queue_pedido_pago_1", exchange: "exchange_pedido_pago", routingKey: "key_default", null);
 
         var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (ch, ea) =>
+        consumer.Received += async (ch, ea) =>
         {
             var body = ea.Body.ToArray();
             var messageSerialize = Encoding.UTF8.GetString(body);
             var message = JsonSerializer.Deserialize<ConsumerModel>(messageSerialize, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (message != null && !string.IsNullOrEmpty(message.Email))
-                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = message.Email, Content = "Seu pagamento foi confirmado, seu pedido entrou na fila de produção.", Subject = "Pedido pago" });
+            if (message != null && Guid.Empty != message.OrderId)
+            {
+                var email = await searchCustomerByCustomerIdUseCase.Execute(message.CustomerId);
+                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = email, Content = $"Seu pagamento foi confirmado, seu pedido #{message.OrderId} entrou na fila de produção.", Subject = "Pedido pago" });
+            }
             Console.WriteLine(" Recebendo a seguinte mensagem: {0}", message);
             channel.BasicAck(ea.DeliveryTag, false);
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
 
         };
         string consumerTag = channel.BasicConsume(queue: "queue_pedido_pago_1", autoAck: false, consumer: consumer);
     }
 
-    private static void ListenQueuePedidoCancelado(IConnection conn, ISendEmailUseCase sendEmailUseCase)
+    private static void ListenQueuePedidoCancelado(IConnection conn, ISendEmailUseCase sendEmailUseCase, ISearchCustomerByCustomerIdUseCase searchCustomerByCustomerIdUseCase)
     {
         IModel channel = conn.CreateModel();
         channel.ExchangeDeclare(exchange: "exchange_pedido_cancelado", type: ExchangeType.Fanout, durable: false, autoDelete: false, null);
@@ -86,17 +92,19 @@ public static class RabbitConsumer
         channel.QueueBind(queue: "queue_pedido_cancelado_1", exchange: "exchange_pedido_cancelado", routingKey: "key_default", null);
 
         var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (ch, ea) =>
+        consumer.Received += async (ch, ea) =>
         {
             var body = ea.Body.ToArray();
             var messageSerialize = Encoding.UTF8.GetString(body);
             var message = JsonSerializer.Deserialize<ConsumerModel>(messageSerialize, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (message != null && !string.IsNullOrEmpty(message.Email))
-                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = message.Email, Content = "Seu pagamento foi recusado e seu pedido foi cancelado.", Subject = "Pedido cancelado" });
+            if (message != null && Guid.Empty != message.OrderId)
+            {
+                var email = await searchCustomerByCustomerIdUseCase.Execute(message.CustomerId);
+                sendEmailUseCase.Execute(new Domain.DTOs.SendEmailDTO { Email = email, Content = $"Seu pagamento foi recusado e seu pedido #{message.OrderId} foi cancelado.", Subject = "Pedido cancelado" });
+            }
             Console.WriteLine(" Recebendo a seguinte mensagem: {0}", message);
             channel.BasicAck(ea.DeliveryTag, false);
-            Thread.Sleep(1000);
-
+            Thread.Sleep(100);
         };
         string consumerTag = channel.BasicConsume(queue: "queue_pedido_cancelado_1", autoAck: false, consumer: consumer);
     }
