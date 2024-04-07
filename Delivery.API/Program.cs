@@ -15,8 +15,11 @@ public class Program
         builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
         builder.Services.AddScoped<ISendEmailUseCase, SendEmailUseCase>();
         builder.Services.AddScoped<ISearchCustomerByCustomerIdUseCase, SearchCustomerByCustomerIdUseCase>();
+        //builder.Configuration.AddJsonFile("appsettings.json", true, true);
+        var connectionString = Environment.GetEnvironmentVariable("connectionDatabase");
+        Console.WriteLine(connectionString);        
         builder.Services.AddDbContext<DeliveryContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseNpgsql(connectionString));
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();

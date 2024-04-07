@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres-pod
+  template:
+    metadata:
+      labels:
+        app: postgres-pod
+    spec:
+      containers:
+      - image: postgres:latest
+        name: postgres
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: postgres-configmap        
+      volumes:
+        - name: postgres-persistentvolumeclaim
+          persistentVolumeClaim:
+            claimName: postgres-persistentvolumeclaim
+

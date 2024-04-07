@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: delivery-pod
+  name: delivery-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: delivery-pod
+  template:
+    metadata:
+      labels:
+        app: delivery-pod
+    spec:
+      containers:
+      - image: marcoseckart/delivery:latest
+        name: delivery
+        ports:
+        - containerPort: 8080 
+        envFrom:
+          - configMapRef:
+              name: "delivery-configmap"
