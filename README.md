@@ -23,7 +23,8 @@ MS-Delivery em .NET 8. Projeto que compõe o serviço de eccomerce desenvolvido 
 ## ⚙️ Funcionalidades
 
 - [x] Enviar e-mails para usuários sobre status do seu pedido (pedido pago, pedido cancelado e pedido pronto);
-- [x] Consumers do rabbitmq para três filas distintas.
+- [x] Consumers do rabbitmq para três filas distintas;
+- [x] Suporte ao k8s. 
 ---
 
 ## 💻 Como executar
